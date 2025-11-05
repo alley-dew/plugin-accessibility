@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Accessibility Checker</title>
+    <style>
+      :root { --bg: #111; --fg: #eee; --muted: #aaa; --accent: #5ad; --err: #f66; --warn: #fc3; --info: #6cf; }
+      html, body { margin: 0; padding: 0; font: 12px/1.4 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Inter, Arial, sans-serif; background: var(--bg); color: var(--fg); }
+      .wrap { padding: 12px; display: grid; gap: 10px; }
+      fieldset { border: 1px solid #333; border-radius: 8px; padding: 10px; }
+      legend { color: var(--muted); padding: 0 6px; }
+      label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 8px 4px 0; }
+      input[type="number"] { width: 64px; background: #1a1a1a; border: 1px solid #333; color: var(--fg); border-radius: 6px; padding: 4px; }
+      .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      button { background: var(--accent); color: #001018; border: 0; border-radius: 8px; padding: 8px 10px; font-weight: 600; cursor: pointer; }
+      button.secondary { background: #222; color: var(--fg); border: 1px solid #333; }
+      .results { max-height: 280px; overflow: auto; border: 1px solid #333; border-radius: 8px; }
+      .item { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #222; }
+      .item:last-child { border-bottom: 0; }
+      .badge { font-size: 10px; border-radius: 999px; padding: 2px 6px; font-weight: 700; }
+      .error { background: #3a0000; color: var(--err); }
+      .warn { background: #2f2500; color: var(--warn); }
+      .info { background: #00293a; color: var(--info); }
+      .meta { color: var(--muted); font-size: 11px; }
+      .empty { text-align: center; color: var(--muted); padding: 24px; }
+      .split { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+      .grid { display: grid; gap: 8px; }
+      .k { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="grid">
+        <fieldset>
+          <legend>Scope</legend>
+          <label><input type="radio" name="scope" value="selection">Selection</label>
+          <label><input type="radio" name="scope" value="page" checked>Current page</label>
+          <label><input type="radio" name="scope" value="document">Entire document</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Rules</legend>
+          <div class="row">
+            <label><input type="checkbox" id="r-color" checked>색 비의존 인식</label>
+            <label><input type="checkbox" id="r-contrast" checked>텍스트/이미지 대비</label>
+            <label><input type="checkbox" id="r-auto" checked>자동 콘텐츠 제어</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Thresholds</legend>
+          <div class="row">
+            <label><span class="k">명도 대비</span><input type="number" id="min-contrast" value="3" min="1" step="0.1"></label>
+          </div>
+        </fieldset>
+
+        <div class="split">
+          <div class="row">
+            <button id="run">Run checks</button>
+            <button id="clear" class="secondary">Clear</button>
+          </div>
+          <div>
+            <select id="filter">
+              <option value="all">All severities</option>
+              <option value="error">Error</option>
+              <option value="warn">Warn</option>
+              <option value="info">Info</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="results" class="results empty">Run the checks to see results</div>
+
+        <div class="split">
+          <div class="meta" id="count">0 issues</div>
+          <button id="close" class="secondary">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const qs = (s) => document.querySelector(s);
+      const resultsEl = qs('#results');
+      const countEl = qs('#count');
+
+      const getPayload = () => {
+        const scope = document.querySelector('input[name="scope"]:checked').value;
+        const rules = {
+          colorIndependence: qs('#r-color').checked,
+          contrast: qs('#r-contrast').checked,
+          autoContent: qs('#r-auto').checked,
+        };
+        const minContrast = parseFloat(qs('#min-contrast').value || '3');
+        return { scope, rules, minContrast };
+      };
+
+      const severityBadge = (sev) => {
+        const cls = sev === 'error' ? 'error' : sev === 'warn' ? 'warn' : 'info';
+        return `<span class="badge ${cls}">${sev.toUpperCase()}</span>`;
+      };
+
+      const render = (issues) => {
+        const filter = qs('#filter').value;
+        const list = (filter === 'all') ? issues : issues.filter(i => i.severity === filter);
+        countEl.textContent = `${issues.length} issues (${list.length} shown)`;
+        if (!list.length) {
+          resultsEl.classList.add('empty');
+          resultsEl.innerHTML = 'No issues found for current filter';
+          return;
+        }
+        resultsEl.classList.remove('empty');
+        resultsEl.innerHTML = list.map(i => `
+          <div class="item">
+            <div>
+              ${severityBadge(i.severity)} <strong>${i.type}</strong> · ${i.message}<br>
+              <span class="meta">${i.page ? i.page + ' · ' : ''}${i.name}</span>
+            </div>
+            <div>
+              <button data-id="${i.nodeId}" class="secondary sel">Select</button>
+            </div>
+          </div>
+        `).join('');
+        resultsEl.querySelectorAll('.sel').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.getAttribute('data-id');
+            parent.postMessage({ pluginMessage: { type: 'select-node', nodeId: id } }, '*');
+          });
+        });
+      };
+
+      qs('#run').addEventListener('click', () => {
+        resultsEl.classList.add('empty');
+        resultsEl.textContent = 'Checking…';
+        parent.postMessage({ pluginMessage: { type: 'run-checks', payload: getPayload() } }, '*');
+      });
+      qs('#filter').addEventListener('change', () => {
+        // re-render with last known
+        if (window.__lastIssues) render(window.__lastIssues);
+      });
+      qs('#clear').addEventListener('click', () => { resultsEl.innerHTML = '—'; countEl.textContent = '0 issues'; resultsEl.classList.add('empty'); });
+      qs('#close').addEventListener('click', () => { parent.postMessage({ pluginMessage: { type: 'close' } }, '*'); });
+
+      window.onmessage = (event) => {
+        const msg = event.data.pluginMessage;
+        if (!msg) return;
+        if (msg.type === 'results') {
+          window.__lastIssues = msg.issues || [];
+          render(window.__lastIssues);
+        }
+      };
+    </script>
+  </body>
+  </html>
