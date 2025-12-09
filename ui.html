@@ -1,154 +1,860 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Accessibility Checker</title>
-    <style>
-      :root { --bg: #111; --fg: #eee; --muted: #aaa; --accent: #5ad; --err: #f66; --warn: #fc3; --info: #6cf; }
-      html, body { margin: 0; padding: 0; font: 12px/1.4 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Inter, Arial, sans-serif; background: var(--bg); color: var(--fg); }
-      .wrap { padding: 12px; display: grid; gap: 10px; }
-      fieldset { border: 1px solid #333; border-radius: 8px; padding: 10px; }
-      legend { color: var(--muted); padding: 0 6px; }
-      label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 8px 4px 0; }
-      input[type="number"] { width: 64px; background: #1a1a1a; border: 1px solid #333; color: var(--fg); border-radius: 6px; padding: 4px; }
-      .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-      button { background: var(--accent); color: #001018; border: 0; border-radius: 8px; padding: 8px 10px; font-weight: 600; cursor: pointer; }
-      button.secondary { background: #222; color: var(--fg); border: 1px solid #333; }
-      .results { max-height: 280px; overflow: auto; border: 1px solid #333; border-radius: 8px; }
-      .item { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px; border-bottom: 1px solid #222; }
-      .item:last-child { border-bottom: 0; }
-      .badge { font-size: 10px; border-radius: 999px; padding: 2px 6px; font-weight: 700; }
-      .error { background: #3a0000; color: var(--err); }
-      .warn { background: #2f2500; color: var(--warn); }
-      .info { background: #00293a; color: var(--info); }
-      .meta { color: var(--muted); font-size: 11px; }
-      .empty { text-align: center; color: var(--muted); padding: 24px; }
-      .split { display: grid; grid-template-columns: 1fr auto; align-items: center; }
-      .grid { display: grid; gap: 8px; }
-      .k { color: var(--muted); }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <div class="grid">
-        <fieldset>
-          <legend>Scope</legend>
-          <label><input type="radio" name="scope" value="selection">Selection</label>
-          <label><input type="radio" name="scope" value="page" checked>Current page</label>
-          <label><input type="radio" name="scope" value="document">Entire document</label>
-        </fieldset>
 
-        <fieldset>
-          <legend>Rules</legend>
-          <div class="row">
-            <label><input type="checkbox" id="r-color" checked>색 비의존 인식</label>
-            <label><input type="checkbox" id="r-contrast" checked>텍스트/이미지 대비</label>
-            <label><input type="checkbox" id="r-auto" checked>자동 콘텐츠 제어</label>
-          </div>
-        </fieldset>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Accessibility Checker</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --border: #e0e0e0;
+      --fg: #000000;
+      --muted: #5c5c5c;
+      --accent: #0066ff;
+      --accent-hover: #0052cc;
+      --err: #ff6b6b;
+      --warn: #ffcc00;
+      --info: #4da6ff;
+      --success: #4caf50;
+      --gray: #858585;
+      --font-body: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-heading: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-size-10: 10px;
+      --font-size-14: 14px;
+      --font-size-16: 16px;
+      --font-size-18: 18px;
+      --font-size-20: 20px;
+      --font-size-24: 24px;
+      --font-weight-regular: 400;
+      --font-weight-bold: 700;
+      --line-height-xs: 16px;
+      --line-height-ms: 20px;
+      --line-height-m: 24px;
+      --line-height-ml: 26px;
+      --line-height-l: 30px;
+      --line-height-xl: 32px;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-round: 500px;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
 
-        <fieldset>
-          <legend>Thresholds</legend>
-          <div class="row">
-            <label><span class="k">명도 대비</span><input type="number" id="min-contrast" value="3" min="1" step="0.1"></label>
-          </div>
-        </fieldset>
+    [data-theme="dark"] {
+      --bg: #1a1a1a;
+      --surface: #2c2c2c;
+      --border: #444444;
+      --fg: #e0e0e0;
+      --muted: #999999;
+      --accent: #0d99ff;
+      --accent-hover: #007be5;
+      --err: #ff6b6b;
+      --warn: #ffcc00;
+      --info: #4da6ff;
+      --success: #4caf50;
+      --gray: #858585;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    }
 
-        <div class="split">
-          <div class="row">
-            <button id="run">Run checks</button>
-            <button id="clear" class="secondary">Clear</button>
-          </div>
-          <div>
-            <select id="filter">
-              <option value="all">All severities</option>
-              <option value="error">Error</option>
-              <option value="warn">Warn</option>
-              <option value="info">Info</option>
-            </select>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-body);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-regular);
+      line-height: var(--line-height-ms);
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    .wrap {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 100vh;
+    }
+
+    h2 {
+      margin: 0;
+      font-family: var(--font-heading);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-bold);
+      line-height: var(--line-height-ms);
+      color: var(--fg);
+      letter-spacing: 0;
+    }
+
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+      font-family: var(--font-body);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-regular);
+      line-height: var(--line-height-ms);
+      color: var(--fg);
+    }
+
+    /* Custom Checkbox Styling */
+    input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      margin: 0;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    input[type="checkbox"]:hover {
+      border-color: var(--accent);
+      background: #f8fbff;
+    }
+
+    input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      background-image: url('data:image/svg+xml;utf8,<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 5L4 7L8 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface);
+      margin: 0;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    input[type="radio"]:hover {
+      border-color: var(--accent);
+    }
+
+    input[type="radio"]:checked {
+      border-color: var(--accent);
+    }
+
+    input[type="radio"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    input[type="number"] {
+      width: 60px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      transition: border-color 0.2s ease;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    select {
+      background: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+
+    select:hover {
+      border-color: #d0d0d0;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-family: var(--font-body);
+      font-weight: var(--font-weight-bold);
+      font-size: var(--font-size-14);
+      line-height: var(--line-height-ms);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+    }
+
+    button.secondary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      box-shadow: none;
+    }
+
+    button.secondary:hover {
+      background: #f9f9f9;
+      border-color: #d0d0d0;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .results-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 200px;
+      max-height: 400px;
+      /* for flex scrolling */
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .results {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .results.empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .item {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      cursor: pointer;
+      align-items: start;
+      transition: background 0.15s ease;
+    }
+
+    .item:last-child {
+      border-bottom: none;
+    }
+
+    .item:hover {
+      background: #f9f9f9;
+    }
+
+    .item-content {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .item-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+
+    .badge {
+      font-family: var(--font-body);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-bold);
+      line-height: var(--line-height-xs);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      text-transform: uppercase;
+    }
+
+    .badge.error {
+      background: rgba(255, 107, 107, 0.2);
+      color: var(--err);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+
+    .badge.warn {
+      background: rgba(255, 204, 0, 0.2);
+      color: var(--warn);
+      border: 1px solid rgba(255, 204, 0, 0.3);
+    }
+
+    .badge.info {
+      background: rgba(77, 166, 255, 0.2);
+      color: var(--info);
+      border: 1px solid rgba(77, 166, 255, 0.3);
+    }
+
+    .meta {
+      font-family: var(--font-body);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-regular);
+      line-height: var(--line-height-ms);
+      color: var(--muted);
+    }
+
+    .suggestion {
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: #f0f7ff;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-family: var(--font-body);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-regular);
+      line-height: var(--line-height-ms);
+      color: #444;
+    }
+
+    .contrast-tips {
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .contrast-tips details {
+      cursor: pointer;
+    }
+
+    .contrast-tips summary {
+      font-size: 11px;
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      user-select: none;
+      list-style: none;
+      padding: 4px 0;
+    }
+
+    .contrast-tips summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .tips-content {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    .tips-content p {
+      margin: 4px 0;
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    .tips-content strong {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .tips-button {
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--text-primary);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .tips-button:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .tips-view {
+      display: none;
+      padding: 16px;
+    }
+
+    .tips-view.active {
+      display: block;
+    }
+
+    .tips-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .back-button {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+    }
+
+    .back-button:hover {
+      background: var(--border);
+    }
+
+    .tips-section {
+      margin-bottom: 12px;
+    }
+
+    .tips-section h3 {
+      font-size: 14px;
+      font-weight: var(--font-weight-medium);
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .tips-section ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .tips-section li {
+      padding: 6px 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .tips-section li:last-child {
+      border-bottom: none;
+    }
+
+    .tips-section li strong {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Theme Toggle Switch */
+    .theme-switch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 20px;
+      background: var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .toggle-switch.active {
+      background: var(--accent);
+    }
+
+    .toggle-slider {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-switch.active .toggle-slider {
+      transform: translateX(20px);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #d0d0d0;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #b0b0b0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <!-- Settings Section -->
+    <div class="section">
+      <div class="control-group">
+        <div class="row" style="justify-content: space-between;">
+          <h2>검사 범위</h2>
+          <div class="row" style="gap: 12px;">
+            <label><input type="radio" name="scope" value="selection"> 선택 영역</label>
+            <label><input type="radio" name="scope" value="page" checked> 현재 페이지</label>
+            <label><input type="radio" name="scope" value="document"> 전체 문서</label>
           </div>
         </div>
-
-        <div id="results" class="results empty">Run the checks to see results</div>
-
-        <div class="split">
-          <div class="meta" id="count">0 issues</div>
-          <button id="close" class="secondary">Close</button>
+        <hr style="border: 0; border-top: 1px solid var(--border); width: 100%; margin: 8px 0;">
+        <div class="row" style="justify-content: space-between;">
+          <h2>검사 규칙</h2>
+          <div class="row" style="gap: 6px;">
+            <label><input type="checkbox" id="r-color" checked> 색상 독립성</label>
+            <label><input type="checkbox" id="r-contrast" checked> 텍스트 명암비</label>
+            <label><input type="checkbox" id="r-auto" checked> 자동 콘텐츠</label>
+          </div>
+        </div>
+        <hr style="border: 0; border-top: 1px solid var(--border); width: 100%; margin: 8px 0;">
+        <div class="row" style="justify-content: space-between;">
+          <h2>기준값 설정</h2>
+          <div class="row" style="gap: 6px;">
+            <label><input type="radio" name="contrastMode" value="wcag" checked> 가이드 규정</label>
+            <label><input type="radio" name="contrastMode" value="fixed3"> 3:1 고정</label>
+          </div>
         </div>
       </div>
     </div>
 
-    <script>
-      const qs = (s) => document.querySelector(s);
-      const resultsEl = qs('#results');
-      const countEl = qs('#count');
+    <!-- Actions -->
+    <div class="actions">
+      <div class="row">
+        <button id="run">검사 실행</button>
+        <button id="stop" class="secondary">중지</button>
+        <button id="clear" class="secondary">초기화</button>
+      </div>
+      <div class="row" style="justify-content: flex-end;">
+        <button id="check-contrast" class="secondary">명도 체크</button>
+      </div>
+    </div>
 
-      const getPayload = () => {
-        const scope = document.querySelector('input[name="scope"]:checked').value;
-        const rules = {
-          colorIndependence: qs('#r-color').checked,
-          contrast: qs('#r-contrast').checked,
-          autoContent: qs('#r-auto').checked,
-        };
-        const minContrast = parseFloat(qs('#min-contrast').value || '3');
-        return { scope, rules, minContrast };
+    <!-- Results -->
+    <div class="results-container">
+      <div class="results-header">
+        <span id="count">0 issues</span>
+        <select id="filter">
+          <option value="all">모든 이슈 보기</option>
+          <option value="error">Error만 보기</option>
+          <option value="warn">Warn만 보기</option>
+          <option value="info">Info만 보기</option>
+        </select>
+      </div>
+      <div id="results" class="results empty">
+        검사를 실행하여 접근성 이슈를 확인하세요.
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="theme-switch">
+        <span id="theme-label">라이트</span>
+        <div class="toggle-switch" id="theme-toggle" onclick="toggleTheme()">
+          <div class="toggle-slider"></div>
+        </div>
+        <button id="show-tips"
+          style="background: none; border: none; color: var(--text-secondary); font-size: 12px; cursor: pointer; padding: 4px 8px; margin-left: 12px; display: flex; align-items: center; gap: 4px;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M8 10.6667V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <path d="M8 5.33334H8.00667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          개선 팁</button>
+      </div>
+      <button id="close" class="secondary">닫기</button>
+    </div>
+  </div>
+
+  <!-- Tips View -->
+  <div class="tips-view" id="tips-view">
+    <div class="tips-header">
+      <button class="back-button" id="back-to-checker">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </button>
+      <h2 style="margin: 0; font-size: 16px;">접근성 개선 팁</h2>
+    </div>
+
+    <div class="tips-section">
+      <h3>💡 명도 대비 개선 팁 (색상 진하게 하지 않는 방법)</h3>
+      <ul>
+        <li><strong>1. 텍스트 크기 키우기</strong> - 16px 이상으로 키우면 3:1 기준 적용 (가장 추천)</li>
+        <li><strong>2. 배경 밝게 조정</strong> - 배경을 더 밝게 (#F0F0F0, #F5F5F5) 변경</li>
+        <li><strong>3. 테두리 추가</strong> - 1px solid 테두리로 요소 구분 명확화</li>
+        <li><strong>4. 그림자 효과</strong> - box-shadow로 깊이감 추가하여 대비 개선</li>
+      </ul>
+    </div>
+
+    <div class="tips-section">
+      <h3>🎨 색상 독립성 개선 팁 (색상만으로 구분하지 않기)</h3>
+      <ul>
+        <li><strong>1. 텍스트 굵기 차별화</strong> - 선택(Bold) vs 미선택(Regular)으로 구분</li>
+        <li><strong>2. 밑줄/상단선 추가</strong> - 선택된 항목에 underline 또는 top border 추가</li>
+        <li><strong>3. 아이콘 추가</strong> - 선택 상태에 체크(✓) 또는 화살표(→) 아이콘 표시</li>
+        <li><strong>4. 크기 차별화</strong> - 선택된 항목을 살짝 크게 또는 패딩 증가</li>
+        <li><strong>5. 테두리 두께</strong> - 선택(2px) vs 미선택(1px)으로 구분</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const qs = (s) => document.querySelector(s);
+    const resultsEl = qs('#results');
+    const countEl = qs('#count');
+
+    const getPayload = () => {
+      const scope = document.querySelector('input[name="scope"]:checked').value;
+      const rules = {
+        colorIndependence: qs('#r-color').checked,
+        contrast: qs('#r-contrast').checked,
+        autoContent: qs('#r-auto').checked,
       };
+      const contrastMode = document.querySelector('input[name="contrastMode"]:checked').value;
+      return { scope, rules, contrastMode };
+    };
 
-      const severityBadge = (sev) => {
-        const cls = sev === 'error' ? 'error' : sev === 'warn' ? 'warn' : 'info';
-        return `<span class="badge ${cls}">${sev.toUpperCase()}</span>`;
-      };
+    // Theme toggle functionality
+    function toggleTheme() {
+      const themeToggle = document.getElementById('theme-toggle');
+      const themeLabel = document.getElementById('theme-label');
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
-      const render = (issues) => {
-        const filter = qs('#filter').value;
-        const list = (filter === 'all') ? issues : issues.filter(i => i.severity === filter);
-        countEl.textContent = `${issues.length} issues (${list.length} shown)`;
-        if (!list.length) {
+      document.documentElement.setAttribute('data-theme', newTheme);
+
+      if (newTheme === 'dark') {
+        themeToggle.classList.add('active');
+        themeLabel.textContent = '다크';
+      } else {
+        themeToggle.classList.remove('active');
+        themeLabel.textContent = '라이트';
+      }
+    }
+
+    // Tips view navigation
+    const mainView = document.querySelector('.wrap');
+    const tipsView = document.getElementById('tips-view');
+    const showTipsBtn = document.getElementById('show-tips');
+    const backBtn = document.getElementById('back-to-checker');
+
+    showTipsBtn.addEventListener('click', () => {
+      mainView.style.display = 'none';
+      tipsView.classList.add('active');
+    });
+
+    backBtn.addEventListener('click', () => {
+      tipsView.classList.remove('active');
+      mainView.style.display = '';
+    });
+
+    const severityBadge = (sev) => {
+      const cls = sev === 'error' ? 'error' : sev === 'warn' ? 'warn' : 'info';
+      return `<span class="badge ${cls}">${sev.toUpperCase()}</span>`;
+    };
+
+    const render = (issues) => {
+      const filter = qs('#filter').value;
+      const list = (filter === 'all') ? issues : issues.filter(i => i.severity === filter);
+      countEl.textContent = `${issues.length} issues found (${list.length} shown)`;
+
+      if (!list.length) {
+        resultsEl.classList.add('empty');
+        resultsEl.innerHTML = '발견된 이슈가 없습니다.';
+        return;
+      }
+
+      resultsEl.classList.remove('empty');
+      resultsEl.innerHTML = list.map(i => `
+        <div class="item">
+          <div class="item-content">
+            <div class="item-header">
+              ${severityBadge(i.severity)}
+              <span>${i.type}</span>
+            </div>
+            <div style="margin-top:4px;">${i.message}</div>
+            <div class="meta">
+              위치: ${(i.page || '')}${(i.page && (i.frame || i.name)) ? ', ' : ''}${i.frame || i.name || ''}
+            </div>
+            ${i.suggestion ? `<div class="suggestion">💡 <strong>해결책:</strong> ${i.suggestion}</div>` : ''}
+          </div>
+          <button data-id="${i.nodeId}" class="secondary" style="padding:4px 8px; font-size:11px;">선택</button>
+        </div>
+      `).join('');
+
+      resultsEl.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          parent.postMessage({ pluginMessage: { type: 'select-node', nodeId: id } }, '*');
+        });
+      });
+    };
+
+    qs('#run').addEventListener('click', () => {
+      resultsEl.classList.add('empty');
+      const payload = getPayload();
+      parent.postMessage({ pluginMessage: { type: 'run', ...payload } }, '*');
+    });
+
+    qs('#stop').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'stop' } }, '*');
+    });
+
+    qs('#filter').addEventListener('change', () => {
+      if (window.__lastIssues) render(window.__lastIssues);
+    });
+
+    qs('#clear').addEventListener('click', () => {
+      resultsEl.innerHTML = '\u003cdiv class=\"empty\"\u003e검사를 실행하여 접근성 이슈를 확인하세요.\u003c/div\u003e';
+      countEl.textContent = '0 issues';
+      resultsEl.classList.add('empty');
+      window.__lastIssues = [];
+    });
+
+    qs('#check-contrast').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'check-contrast' } }, '*');
+    });
+
+    qs('#close').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'close' } }, '*');
+    });
+
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+      if (msg.type === 'results') {
+        if (msg.meta && msg.meta.noSelection) {
+          window.__lastIssues = [];
           resultsEl.classList.add('empty');
-          resultsEl.innerHTML = 'No issues found for current filter';
+          resultsEl.innerHTML = '선택된 프레임이나 컴포넌트를 찾지 못했습니다. 검사할 영역을 선택한 뒤 다시 실행하세요.';
+          countEl.textContent = '0 issues (selection required)';
           return;
         }
-        resultsEl.classList.remove('empty');
-        resultsEl.innerHTML = list.map(i => `
-          <div class="item">
-            <div>
-              ${severityBadge(i.severity)} <strong>${i.type}</strong> · ${i.message}<br>
-              <span class="meta">${i.page ? i.page + ' · ' : ''}${i.name}</span>
-            </div>
-            <div>
-              <button data-id="${i.nodeId}" class="secondary sel">Select</button>
-            </div>
-          </div>
-        `).join('');
-        resultsEl.querySelectorAll('.sel').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const id = e.currentTarget.getAttribute('data-id');
-            parent.postMessage({ pluginMessage: { type: 'select-node', nodeId: id } }, '*');
-          });
-        });
-      };
-
-      qs('#run').addEventListener('click', () => {
-        resultsEl.classList.add('empty');
-        resultsEl.textContent = 'Checking…';
-        parent.postMessage({ pluginMessage: { type: 'run-checks', payload: getPayload() } }, '*');
-      });
-      qs('#filter').addEventListener('change', () => {
-        // re-render with last known
-        if (window.__lastIssues) render(window.__lastIssues);
-      });
-      qs('#clear').addEventListener('click', () => { resultsEl.innerHTML = '—'; countEl.textContent = '0 issues'; resultsEl.classList.add('empty'); });
-      qs('#close').addEventListener('click', () => { parent.postMessage({ pluginMessage: { type: 'close' } }, '*'); });
-
-      window.onmessage = (event) => {
-        const msg = event.data.pluginMessage;
-        if (!msg) return;
-        if (msg.type === 'results') {
-          window.__lastIssues = msg.issues || [];
-          render(window.__lastIssues);
+        if (msg.meta && msg.meta.cancelled) {
+          window.__lastIssues = [];
+          resultsEl.classList.add('empty');
+          resultsEl.innerHTML = '검사가 중지되었습니다.';
+          countEl.textContent = '0 issues (stopped)';
+          return;
         }
-      };
-    </script>
-  </body>
-  </html>
+        window.__lastIssues = msg.issues || [];
+        render(window.__lastIssues);
+      }
+    };
+  </script>
+</body>
+
+</html>
